@@ -196,17 +196,17 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Start server
-// ─────────────────────────────────────────────────────────────────────────────
-
-app.listen(PORT, () => {
-  logger.info(
-    {
-      port: PORT,
-      mockMode: process.env.MOCK_PROVIDERS === 'true',
-      nodeEnv: process.env.NODE_ENV,
-    },
-    `🔐 Bridgekeeper running on http://localhost:${PORT}`
-  );
-});
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    logger.info(
+      {
+        port: PORT,
+        mockMode: process.env.MOCK_PROVIDERS === 'true',
+        nodeEnv: process.env.NODE_ENV,
+      },
+      `🔐 Bridgekeeper running on http://localhost:${PORT}`
+    );
+  });
+}
 
 export { app };
