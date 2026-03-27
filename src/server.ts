@@ -209,4 +209,4 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   });
 }
 
-export { app };
+export default app;
