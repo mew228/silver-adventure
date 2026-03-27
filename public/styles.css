@@ -1434,3 +1434,56 @@ footer {
 /* Scrollbar */
 [data-theme="dark"] ::-webkit-scrollbar-track { background: #0F0F0F; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb  { background: #F0F0E8; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DARK MODE TEXT VISIBILITY FIX — #architecture (always-dark-bg section)
+   The section bg is hardcoded #0A0A0A in dark mode, but text variables
+   (--nb-white) resolve to #0F0F0F, making text invisible. Force white.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Section-level text override */
+[data-theme="dark"] #architecture {
+  color: #FFFFFF;
+}
+
+/* Section label ("HOW IT WORKS" eyebrow) */
+[data-theme="dark"] .nb-section-label--inverted {
+  color: #FFFFFF !important;
+  border-top-color: #FFFFFF !important;
+}
+
+/* Main heading */
+[data-theme="dark"] .arch-heading {
+  color: #FFFFFF !important;
+}
+
+/* Cards 01 (yellow) and 02 (lime) → dark text for contrast on bright bg */
+[data-theme="dark"] .arch-card--yellow,
+[data-theme="dark"] .arch-card--lime {
+  color: #0A0A0A !important;
+}
+[data-theme="dark"] .arch-card--yellow *,
+[data-theme="dark"] .arch-card--lime * {
+  color: #0A0A0A !important;
+}
+
+/* Cards 03 (purple) and 04 (coral) → white text for contrast on dark bg */
+[data-theme="dark"] .arch-card--purple,
+[data-theme="dark"] .arch-card--coral {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .arch-card--purple *,
+[data-theme="dark"] .arch-card--coral * {
+  color: #FFFFFF !important;
+}
+
+/* Footer text visibility */
+[data-theme="dark"] footer {
+  color: #FFFFFF;
+}
+[data-theme="dark"] .footer-left-title,
+[data-theme="dark"] .footer-left-sub,
+[data-theme="dark"] .footer-badge {
+  color: #F0F0E8 !important;
+}
+

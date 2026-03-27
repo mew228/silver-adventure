@@ -8,7 +8,29 @@
 **[https://bridgekeeper.vercel.app](https://bridgekeeper.vercel.app)**
 
 ## 🎬 Demo Video
-**[https://youtu.be/REPLACE](https://youtu.be/REPLACE)**
+**[https://youtu.be/REPLACE_AFTER_UPLOAD](https://youtu.be/REPLACE_AFTER_UPLOAD)**
+
+---
+
+## Judges: quick start without real credentials
+
+```bash
+git clone https://github.com/mew228/silver-adventure.git
+cd silver-adventure
+cp .env.example .env
+# .env already has MOCK_PROVIDERS=true — no real API keys needed
+npm install
+npm start
+# Open http://localhost:3000
+# Type any goal, select integrations, click Plan & Execute
+# The full workflow runs with realistic mock data
+```
+
+Token Vault integration points in the code:
+- `src/vault/client.ts` — SDK wrapper and token retrieval
+- `src/vault/delegated.ts` — normal delegated OAuth flow
+- `src/vault/async-auth.ts` — suspend/resume for unlinked providers
+- `src/vault/stepup.ts` — step-up challenge and consent flow
 
 ---
 

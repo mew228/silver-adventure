@@ -1,137 +1,70 @@
 # Bridgekeeper — 3-Minute Demo Script
 
-**Total runtime: 3:00 | Format: Screen recording with narration**
+**Total runtime: 2:50 | Format: Screen recording with voiceover narration**
+
+Record in **dark mode** — it looks dramatically better on camera.
 
 ---
 
-## [0:00–0:20] Hook
+## Script
 
-*[Show the Bridgekeeper homepage — dark UI, hero section]*
-
-> "AI agents are powerful. They can read your emails, create tickets, post to Slack — all from a single sentence. But right now, they're either locked in a sandbox with no real capabilities, or they're holding your OAuth tokens. An agent with your Gmail refresh token is a security incident waiting to happen. **Bridgekeeper fixes that.**"
-
-*[Click 'Try Live Demo' button — page scrolls to the planner]*
-
----
-
-## [0:20–0:50] Architecture Walkthrough
-
-*[Open docs/architecture.md in a split pane, or show the How It Works section]*
-
-> "Bridgekeeper runs in two layers. **Layer 1** is a sandboxed AI agent — it takes your natural-language goal and produces a structured capability plan. It never touches a token. **Layer 2** is the Governed Execution Bridge — it validates the plan against a risk policy, then requests short-lived, scoped tokens from **Auth0 Token Vault** before calling any provider API. The agent plans. Auth0 authorizes. Bridgekeeper executes."
-
-*[Point to the ASCII architecture diagram in the README or the How It Works section]*
-
-> "Vault is the trust boundary between intent and execution. No token ever lives outside Vault."
-
----
-
-## [0:50–1:30] Live Demo — Plan & Execute
-
-*[Focus on the Capability Planner section]*
-
-> "Let me show you this live. I'll type a real goal."
-
-*[Type in the goal input:]*
-```
-Check my unread emails, summarize any action items, create GitHub issues for each, and post a summary to the #engineering Slack channel.
-```
-
-*[Select Gmail, GitHub, Slack pills — they highlight with green connected indicators]*
-
-> "I'll select Gmail, GitHub, and Slack — all three are pre-connected in Token Vault."
-
-*[Click MEDIUM posture button]*
-
-> "Risk posture: MEDIUM. This allows read and write but will flag the Slack send."
-
-*[Click 'Plan & Execute']*
-
-> "Watch the capability plan appear as structured JSON..."
-
-*[Plan JSON fades in with syntax highlighting — show capabilities array]*
-
-> "The agent decomposed my goal into four typed capabilities: read_emails, list_repos, create_issue, and send_message. Each one has a risk level. The bridge is now fetching tokens from Vault and executing each one."
-
-*[Job status bar animates to 'RUNNING', then shows step-up suspension]*
+| Timestamp | Screen | Script |
+|-----------|--------|--------|
+| **0:00** | Face or title card — no UI yet | *"AI agents are finally powerful enough to run your life."* |
+| **0:04** | Same | *"But there's one problem: to connect them to your apps, someone has to hold your OAuth tokens. Right now, that someone is usually the model itself."* |
+| **0:12** | Same | *"Bridgekeeper fixes that — zero tokens exposed to the agent. Ever."* |
+| **0:18** | Hero section — animated flow diagram visible. Point to the top box. | *"Bridgekeeper splits agent work into two layers. The local AI — your OpenClaw-style model — stays in restricted mode. It never touches credentials. It only sends a capability request to the bridge."* |
+| **0:28** | Point to the middle box (Token Vault) | *"Auth0 Token Vault sits in the middle. It owns the OAuth flows, stores the refresh tokens, handles consent, and issues scoped access to your real services."* |
+| **0:36** | Point to the bottom box (Your Services) | *"The agent gets results, not tokens."* |
+| **0:40** | Scroll to the How It Works section — four colored cards visible | *"Token Vault handles four flows for us."* |
+| **0:43** | Point to Card 01 (yellow — Delegated OAuth) | *"Delegated OAuth — connect Gmail once, Vault manages the token lifecycle."* |
+| **0:48** | Point to Card 02 (lime — Token Refresh) | *"Silent refresh — tokens expire, Vault renews them mid-workflow, zero interruption."* |
+| **0:53** | Point to Card 03 (purple — Async Authorization) | *"Async authorization — if a service isn't connected yet, Bridgekeeper suspends the job, sends an auth link, and resumes on consent."* |
+| **1:00** | Point to Card 04 (coral — Step-up Auth) | *"And step-up authentication — send an email, delete a record, publish to Notion — any high-risk write requires explicit re-consent before the bridge will execute. The model can't bypass this. Ever."* |
+| **1:10** | Scroll to Capability Planner section. Click into the goal textarea. | *"Let's run a real workflow."* |
+| **1:13** | Type live: `Summarize urgent Gmail threads, create Jira follow-ups, and post a Notion status update` | *"I'm asking the agent to summarize Gmail, create Jira tickets, and update Notion."* |
+| **1:20** | Click Gmail, Jira, Notion tags — they highlight | *"Medium risk posture — that means write actions need approval."* |
+| **1:25** | Click MEDIUM posture button, then click PLAN & EXECUTE | *"I'll hit Plan and Execute now."* |
+| **1:28** | Plan JSON fades in with syntax highlighting | *(pause 3 seconds while JSON appears)* |
+| **1:31** | Point to the JSON output | *"The local agent has decomposed the goal into typed capability requests. Notice it never got a token — it got a plan. Auth0 Token Vault is now being asked for delegated access to each service."* |
+| **1:42** | Execution status updates — step-up consent appears | *"Because sending to Notion is a write action under medium risk, Bridgekeeper is pausing and asking me to confirm."* |
+| **1:50** | Point to step-up UI | *"This is step-up authentication via Token Vault — the bridge will not execute until I explicitly approve."* |
+| **1:57** | Click Approve | *"I'll approve it now."* |
+| **2:00** | Execution completes — status shows success | *"Done. The capability executed with a scoped token. The model never saw the token. Auth0 handled everything."* |
+| **2:10** | Scroll to Audit Log section — table visible with events | *"Every single action is written to an immutable audit log."* |
+| **2:15** | Point to rows in the audit table | *"Token requested. Step-up required. Consent given. Capability executed. You can see exactly what the agent did, what Auth0 authorized, and what hit your real APIs."* |
+| **2:28** | Gesture over the full audit table | *"This is what enterprise-grade AI agent authorization looks like."* |
+| **2:33** | Scroll back to hero section or show face | *"Bridgekeeper is live at bridgekeeper.vercel.app. Full source on GitHub."* |
+| **2:40** | Same | *"Built on Auth0 Token Vault — because the future of AI agents isn't agents that hold your keys."* |
+| **2:47** | Same — smile, confident close | *"It's agents that earn their access, action by action."* |
+| **2:50** | End card / freeze frame | *(end)* |
 
 ---
 
-## [1:30–2:00] Step-Up Consent
+## Recording Notes
 
-*[Step-up modal appears on screen]*
+### Recommended Setup
+- **Tool:** Loom (free, instant YouTube upload) or OBS Studio
+- **Resolution:** 1920×1080, browser in fullscreen (F11)
+- **Theme:** Dark mode — toggle it ON before you start recording
+- **Microphone:** Test levels. Speak at a steady conversational pace — you have room but not much
 
-> "See that? The bridge hit the Slack send_message action — risk level HIGH. **Auth0 Token Vault policy requires explicit re-consent before executing a send action**, no matter what posture you set. The step-up modal is showing me exactly what's about to happen."
+### Pre-load Checklist (avoid fumbling)
 
-*[Read the modal text aloud: "Action: send_message on slack | Risk: HIGH"]*
+| Section | What to have ready |
+|---------|-------------------|
+| **0:00 Hook** | Browser closed or on a title slide. No UI distractions. |
+| **0:18 Architecture** | Page loaded at `localhost:3000`, scrolled to top so hero flow card is visible |
+| **0:40 How It Works** | Know exactly where the 4 cards are — one smooth scroll down |
+| **1:10 Live Demo** | Goal textarea should be empty and cursor-ready. Pre-clear any old output. |
+| **1:25 Execute** | Gmail, Jira, Notion tags and MEDIUM posture should be clickable without hesitation |
+| **1:42 Step-up** | Wait for the step-up UI naturally — dont click ahead |
+| **2:10 Audit Log** | Audit section should have populated from the execution above — just scroll down |
+| **2:33 Close** | Scroll back to hero for a clean ending frame |
 
-> "I'm approving this. In production, this would trigger an Auth0 MFA re-authentication flow."
-
-*[Click Approve & Execute]*
-
-*[Audit log updates — show provider.call.after event for slack:send_message with outcome: success]*
-
-> "And there it is in the audit log — before and after events confirming the execution. Every vault token retrieval, every provider call — immutably logged."
-
----
-
-## [2:00–2:30] Async Authorization Flow
-
-*[Clear the goal input, type a new goal:]*
-```
-Create a summary page in Notion for today's engineering standup
-```
-
-*[Select Notion pill — note it shows as not-connected]*
-
-> "Now let me add Notion to the mix. Notion isn't connected yet — I've never authorized it."
-
-*[Click Plan & Execute]*
-
-*[Async-auth banner appears in the UI]*
-
-> "The bridge detected that Notion has no token in Vault. Instead of failing, it **suspended the job** and generated an Auth0 Token Vault authorization URL. In a real app, the user clicks this and completes OAuth. For the demo, I'll simulate completion."
-
-*[Click 'Simulate Auth Completion']*
-
-*[Job status changes from suspended_async_auth back to running, then completed]*
-*[Connections section updates — Notion now shows as connected]*
-
-> "Token Vault stored the new refresh token. The job automatically resumed and created the Notion page. **The agent never saw the token — Vault handled everything.**"
-
----
-
-## [2:30–3:00] Audit Log & Close
-
-*[Scroll to Audit Log section — show last 10 events]*
-
-> "Everything is in the audit log. vault.token.retrieved — delegated.ts fetched a scoped Gmail token. provider.call.before — bridge about to call GitHub. vault.stepup.approved — user consented to the Slack send. vault.async_auth.completed — Notion was connected mid-flow. provider.call.after — every action confirmed with timing."
-
-*[Zoom into a vault.token.retrieved event]*
-
-> "These are structured JSON events — perfect for SIEM integration, compliance audits, or anomaly detection."
-
-*[Return to hero section]*
-
-> "Bridgekeeper proves you can build powerful, multi-service AI agents without token sprawl. The agent planned. **Auth0 authorized.** Bridgekeeper executed. Securely, auditably, at scale."
-
-*[Show URL: bridgekeeper.vercel.app and GitHub link]*
-
-> "Full source at the link below. Clone it, `npm install && npm start`, and it runs in mock mode immediately — no credentials required."
-
----
-
-*[END — 3:00]*
-
----
-
-## Scene Checklist for Recording
-
-- [ ] Terminal: `npm start` visible, server running on :3000
-- [ ] Browser: http://localhost:3000 in full screen
-- [ ] Microphone: test levels before recording
-- [ ] Mock mode indicator visible (green ● MOCK MODE badge in nav)
-- [ ] Audit log section visible in second half of recording
-- [ ] Show JSON syntax-highlighted plan output clearly
-- [ ] Step-up modal must be clearly visible and legible
-- [ ] Async-auth banner must be clearly visible with the auth URL
+### Tips
+- Practice the full script at least twice before recording — you should be at 2:45–2:50 naturally
+- If you stumble, just pause and re-say the line — you can trim in Loom
+- The dark mode UI is more visually impressive on camera than light mode
+- Auth0 Token Vault is named **6 times** in the script — judges will hear it
+- The phrase "zero tokens exposed" lands in the first 12 seconds

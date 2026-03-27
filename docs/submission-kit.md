@@ -86,13 +86,13 @@ The agent planned. Auth0 authorized. Bridgekeeper executed.
 
 ## Submission Checklist
 
-- [x] Text description with features + functionality (above)
-- [x] 3-minute demo video script (`docs/demo-script.md`)
-- [x] Public GitHub repo with all source and assets
+- [x] Text description included (150+ words above)
+- [x] Blog post included (`## Blog Post` header visible, 300+ words)
 - [x] Live URL: https://bridgekeeper.vercel.app
-- [x] Blog post (300+ words, covers Token Vault achievement) — see "## Blog Post" above
+- [x] GitHub repo URL: https://github.com/mew228/silver-adventure
+- [ ] Demo video URL: [PASTE AFTER UPLOAD]
+- [x] Token Vault used: `src/vault/` (4 files — client.ts, delegated.ts, async-auth.ts, stepup.ts)
+- [x] MOCK_PROVIDERS=true confirmed working
 - [x] `npm install && npm start` works on macOS, Linux, Windows
-- [x] No undeclared env vars — all in `.env.example`
-- [x] MOCK_PROVIDERS=true default — runs without real credentials
-- [x] Token Vault referenced in 4+ source files
 - [x] All 4 Token Vault integration patterns implemented and documented
+
