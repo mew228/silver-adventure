@@ -1,131 +1,235 @@
-# Bridgekeeper Architecture
+# Bridgekeeper — Architecture & Security Model
 
-## System Goal
+## Overview
 
-Bridgekeeper exists to let a restricted local AI agent trigger useful actions in external applications without directly possessing sensitive credentials.
+Bridgekeeper is a two-layer system that separates **AI intent decomposition** from **governed API execution**. Auth0 Token Vault sits at the trust boundary between the layers — all OAuth lifecycle management is delegated to Vault, and the local agent never sees a raw credential.
 
-## Design Principles
+---
 
-### 1. Keep the model away from raw credentials
+## System Components
 
-The local agent should never hold refresh tokens or broad third-party API secrets.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         BROWSER / CLIENT                        │
+│  index.html + app.js                                            │
+│  • Capability Planner UI         • Step-up consent modal        │
+│  • Real-time job status polling  • Async-auth banner            │
+│  • Audit log viewer                                             │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP (POST /api/plan, POST /api/execute)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              LAYER 2: GOVERNED EXECUTION BRIDGE                 │
+│                    (Node.js / Express)                          │
+│                                                                 │
+│  bridge/router.ts       — validates all inbound requests (Zod) │
+│  bridge/planner.ts      — decomposes goal → CapabilityPlan[]   │
+│  bridge/executor.ts     — orchestrates with policy + vault      │
+│  bridge/policy.ts       — LOW/MEDIUM/HIGH risk posture engine  │
+│  bridge/audit.ts        — structured pino logger + ring buffer │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              AUTH0 TOKEN VAULT LAYER                    │   │
+│  │  vault/client.ts    — SDK wrapper, never caches tokens  │   │
+│  │  vault/delegated.ts — silent refresh on near-expiry     │   │
+│  │  vault/async-auth.ts— suspend/resume for unlinked prv   │   │
+│  │  vault/stepup.ts    — step-up MFA for HIGH-risk actions │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ scoped access_token (per request)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      PROVIDER APIs                              │
+│  Gmail · Google Calendar · GitHub · Jira · Notion · Slack      │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 2. Convert access into capabilities
+```
+                        LOCAL AGENT SANDBOX
+┌─────────────────────────────────────────────────────────────────┐
+│  agent/local-agent.ts (Claude claude-sonnet-4-20250514)          │
+│                                                                 │
+│  ✅ Allowed:  POST /api/plan  → receives CapabilityPlan JSON    │
+│  ❌ Blocked:  direct HTTP to any provider API                   │
+│  ❌ Blocked:  direct access to Token Vault                      │
+│  ❌ Blocked:  storage of any credential or refresh token        │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-The planning agent asks for specific approved actions instead of unrestricted API access.
+---
 
-### 3. Preserve user control
+## Token Vault Integration Points (4 of 4)
 
-Every high-sensitivity workflow should support consent, revocation, and clear audit trails.
+### (a) Normal Delegated OAuth
+**File:** `src/vault/delegated.ts` → `getTokenForProvider()`
 
-### 4. Support asynchronous authorization
+When a provider is connected, `vault/client.ts` calls the Auth0 Management API's Token Vault endpoint to retrieve a valid access token. The bridge fetches a fresh token **per provider API call** — it is never stored in process memory or cached between requests.
 
-Some tasks require delayed approval or re-consent. The bridge should handle that without blocking the local runtime indefinitely.
+```
+executor.ts → getTokenForProvider(userId, 'gmail')
+           → vaultClient.getToken(userId, 'gmail')
+           → GET /api/v2/users/{userId}/token-vault/gmail
+           ← { access_token, expires_at, scope }
+           → gmail.readGmailThreads(accessToken, query)
+```
 
-### 5. Minimize returned data
+### (b) Token Refresh
+**File:** `src/vault/delegated.ts` → `refreshToken()`
 
-The bridge should transform upstream API responses into the minimum structured result required by the local agent.
+Before returning a token, `getTokenForProvider()` checks if it expires within 5 minutes. If so, it triggers a silent refresh. In production, re-fetching from the Token Vault API automatically uses the stored refresh token to return a fresh access token—no user interaction required.
 
-## Main Components
+```
+token.expiresAt - Date.now() < 5 * 60 * 1000
+  → refreshToken(userId, provider)
+  → re-fetch from Vault (internally uses stored refresh_token)
+  ← fresh { access_token, new expires_at }
+```
 
-### Local restricted agent
+### (c) Async Authorization
+**File:** `src/vault/async-auth.ts`
 
-Responsibilities:
+When `executor.ts` gets `null` from `getTokenForProvider()` (provider not linked), it calls `initiateAsyncAuth()`. This:
+1. Generates a Token Vault authorization URL (Auth0 `/authorize` with offline_access scope)
+2. Stores a `pendingAuthRequest` keyed by `requestId`
+3. Updates the job to `suspended_async_auth` status
+4. Returns `authUrl` to the UI
 
-- interpret user goals,
-- decompose tasks,
-- request external capabilities,
-- present final outputs.
+When the user completes OAuth, `completeAsyncAuth()` stores the new token in Vault and signals the job to resume via `resumeJobAfterAsyncAuth()`.
 
-Non-responsibilities:
+```
+executor → getTokenForProvider() → null
+        → initiateAsyncAuth(jobId, userId, 'notion')
+        ← { requestId, authUrl: 'https://tenant.auth0.com/authorize?...' }
+        → job.status = 'suspended_async_auth'
+        → UI shows auth banner with authUrl
+[user completes OAuth]
+        → completeAsyncAuth(requestId, accessToken, scope, expiresIn)
+        → vaultClient.storeToken(userId, 'notion', token)
+        → resumeJobAfterAsyncAuth(jobId)
+        → executor resumes, getTokenForProvider() now returns valid token
+```
 
-- storing OAuth tokens,
-- refreshing access tokens,
-- implementing provider-specific auth flows.
+### (d) Step-Up Authentication
+**File:** `src/vault/stepup.ts`
 
-### Bridgekeeper action gateway
+Before executing any action with `riskLevel === 'HIGH'` (send, delete, publish, merge), `executor.ts` calls `issueStepUpChallenge()`. This:
+1. Creates a challenge with a 5-minute TTL
+2. Generates a step-up Auth0 URL (uses `acr_values=multi-factor`)
+3. Updates the job to `suspended_stepup`
+4. Returns `stepUpUrl` to the UI for the consent modal
 
-Responsibilities:
+The executor only proceeds after `approveStepUpChallenge()` is confirmed.
 
-- map agent intents to capabilities,
-- enforce authorization and policy checks,
-- call external services through delegated access,
-- maintain audit records,
-- orchestrate approval flows.
+```
+policy.doesRequireStepUp('send_email') → true
+executor → issueStepUpChallenge(jobId, userId, 'send_email', 'gmail')
+         ← { challengeId, stepUpUrl, status: 'pending' }
+         → job.status = 'suspended_stepup'
+         → UI shows consent modal
+[user approves]
+         → approveStepUpChallenge(challengeId)
+         → resumeJobAfterStepUp(jobId)
+         → executor continues with send_email
+```
 
-### Auth0 Token Vault layer
-
-Responsibilities:
-
-- manage token storage,
-- handle OAuth exchanges,
-- support delegated access,
-- support reauthorization and step-up flows,
-- reduce token exposure to the rest of the system.
-
-## Example Request Lifecycle
-
-1. User asks the local agent to act across multiple services.
-2. The local agent creates a plan and identifies required capabilities.
-3. The local agent sends a request to Bridgekeeper with task context.
-4. Bridgekeeper checks whether valid delegated access exists.
-5. If access is missing or insufficient, Bridgekeeper triggers the appropriate Auth0 flow.
-6. After authorization, Bridgekeeper executes scoped API operations.
-7. Bridgekeeper stores logs and returns a minimized result object.
-8. The local agent summarizes or continues the workflow.
+---
 
 ## Security Model
 
-### Threat: Local compromise
+### Principle of Least Privilege
+- Every provider call uses the **minimum required OAuth scope** for that action
+- Scopes are hardcoded in `vault/async-auth.ts` `scopeForProvider()` — cannot be escalated by the agent
+- The local agent has zero visibility into Token Vault — it only sends goals to `/api/plan`
 
-If the local environment is compromised, the attacker should not automatically obtain long-lived third-party tokens.
+### Token Hygiene
+- Tokens are **never** stored in process memory between requests
+- Tokens are **never** logged (audit events log provider+action, not tokens)
+- Tokens are fetched fresh from Vault before every provider API call
+- Token Vault handles all refresh_token lifecycle — the bridge never sees a refresh token
 
-### Threat: Over-broad tool use
+### Defense in Depth
+```
+Request flow with all guards:
 
-The local agent may over-request access. Capability checks and approval gates reduce this risk.
+User goal
+  → Zod schema validation (router.ts)
+  → Intent decomposition — no credential access (planner.ts)
+  → Policy evaluation — risk level check (policy.ts)
+  → Step-up gate — HIGH-risk actions require re-consent (stepup.ts)
+  → Vault token retrieval — async-auth if provider not linked (delegated.ts)
+  → BEFORE audit event (audit.ts)
+  → Provider API call (providers/*.ts)
+  → AFTER audit event (audit.ts)
+```
 
-### Threat: Unnecessary data exposure
+### Risk Posture Matrix
 
-The bridge should filter or summarize responses so the model only receives what it needs.
+| Risk Level | Action Examples | LOW Posture | MEDIUM Posture | HIGH Posture |
+|---|---|---|---|---|
+| LOW | read_emails, list_events, list_repos | ✅ Allowed | ✅ Allowed | ✅ Allowed |
+| MEDIUM | create_event, create_issue, create_page | ❌ Blocked | ✅ Allowed | ✅ Allowed |
+| HIGH | send_email, send_message, delete | ❌ Blocked | ✅ + Step-up | ✅ + Step-up |
+| CRITICAL | delete_repo, admin | ❌ Blocked | ❌ Blocked | ✅ + Step-up |
 
-### Threat: Sensitive action abuse
+> Step-up is **always required** for HIGH/CRITICAL actions regardless of posture.
 
-Step-up authentication and explicit approval flows should protect high-risk actions.
+---
 
-## Suggested Capability Schema
+## Sequence Diagram: Full Capability Execution
 
-Each capability request can include:
+```
+Browser        Bridge         Policy        Vault         Provider
+  │              │              │              │              │
+  │─ POST /api/execute ────────►│              │              │
+  │              │─ decomposePlan() ──────────►│              │
+  │              │◄─ CapabilityPlan[] ─────────│              │
+  │              │─ evaluateCapability() ──────►│              │
+  │              │◄─ { allowed, requiresStepUp }│              │
+  │              │                             │              │
+  │◄─ 202 { jobId } ────────────│              │              │
+  │              │              │              │              │
+  │              │ [HIGH risk action]           │              │
+  │              │─ issueStepUpChallenge() ─────────────────► │
+  │              │◄─ { challengeId, stepUpUrl } ──────────────│
+  │              │─ job.status='suspended_stepup'              │
+  │              │              │              │              │
+  │─ GET /api/jobs/:id ─────────►              │              │
+  │◄─ { requiresStepUp: true, stepUpUrl } ─────│              │
+  │ [shows consent modal]        │              │              │
+  │─ POST /api/stepup/approve ──►│              │              │
+  │              │─ approveStepUpChallenge()   │              │
+  │              │              │              │              │
+  │              │─ getTokenForProvider() ──────────────────► │
+  │              │◄─ { accessToken } ──────────────────────── │
+  │              │─ auditProviderBefore()      │              │
+  │              │─────────────────────────────────────────── ► provider API
+  │              │◄────────────────────────────────────────── result
+  │              │─ auditProviderAfter()       │              │
+  │              │─ job.status='completed'     │              │
+  │─ GET /api/jobs/:id ─────────►              │              │
+  │◄─ { status: 'completed', results } ────────│              │
+```
 
-- `user_id`
-- `agent_id`
-- `capability_name`
-- `target_service`
-- `justification`
-- `requested_scope`
-- `risk_level`
-- `requires_approval`
+---
 
-## Suggested Audit Log Fields
+## Audit Event Schema
 
-Each audit record can include:
+Every event is emitted to stdout as structured JSON (pino) and stored in a 100-event ring buffer for the UI:
 
-- `timestamp`
-- `user_id`
-- `session_id`
-- `agent_id`
-- `capability_name`
-- `provider`
-- `scopes_used`
-- `action_summary`
-- `status`
-- `approval_reference`
+```json
+{
+  "id": "evt_42_1711234567890",
+  "timestamp": "2026-03-26T17:30:00.000Z",
+  "type": "provider.call.after",
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "userId": "demo-user",
+  "provider": "gmail",
+  "action": "read_emails",
+  "riskLevel": "LOW",
+  "outcome": "success",
+  "durationMs": 312,
+  "message": "gmail.read_emails completed in 312ms"
+}
+```
 
-## MVP Recommendation
-
-For a short hackathon timeline, implement only three connectors and one polished workflow:
-
-- Gmail for reading messages,
-- Notion for writing summaries,
-- Jira for creating follow-up tasks.
-
-That is enough to demonstrate cross-app orchestration, delegated auth, and user-visible value.
+Event types follow a `domain.subdomain.action` convention covering all vault, provider, job, and capability lifecycle events.

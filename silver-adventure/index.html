@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bridgekeeper — Secure AI Agent Execution · Auth0 Token Vault</title>
+  <meta name="description" content="A two-layer agent that uses Auth0 Token Vault for governed OAuth delegation. Your AI plans. Auth0 authorizes. Bridgekeeper executes." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+
+<div class="page">
+
+<!-- ─── NAV ─────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-mark">🔐</div>
+    <span class="nav-logo-text">Bridgekeeper</span>
+    <span class="nav-pill">Auth0 Hackathon</span>
+  </div>
+  <div class="nav-right">
+    <a href="#bento" class="nav-link">Architecture</a>
+    <a href="#planner" class="nav-link">Live Demo</a>
+    <a href="#audit" class="nav-link">Audit Log</a>
+    <span class="nav-pill mock" id="mock-indicator">● MOCK MODE</span>
+  </div>
+</nav>
+
+<!-- ─── HERO ──────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-tag">⚡ Auth0 "Authorized to Act" Hackathon 2025</div>
+  <h1 class="hero-h1">
+    <span class="line-1">Your AI agent.</span>
+    <span class="line-2">Without the risk.</span>
+  </h1>
+  <p class="hero-sub">
+    Bridgekeeper is a two-layer agent where Auth0 Token Vault owns every OAuth lifecycle — delegated consent, silent refresh, step-up auth, async flows. Your secrets never leave the vault.
+  </p>
+  <div class="hero-ctas">
+    <a href="#planner" class="btn-amber">⚡ Try Live Demo</a>
+    <a href="https://github.com/mew228/silver-adventure" target="_blank" class="btn-ghost">⭐ GitHub →</a>
+  </div>
+  <div class="scroll-hint">
+    <span>↓</span>
+    SCROLL TO EXPLORE
+  </div>
+</section>
+
+<!-- ─── BENTO / ARCHITECTURE ─────────────────────────────────────────────── -->
+<section id="bento">
+  <div class="section-eyebrow">How it works</div>
+  <h2 class="section-h2">Two layers. Zero token exposure.</h2>
+  <p class="section-sub">Auth0 Token Vault sits at the trust boundary — the local agent only writes plans, never touches tokens.</p>
+
+  <div class="bento-grid">
+
+    <!-- Featured: Local Agent -->
+    <div class="bento-card featured">
+      <div class="bc-icon">🎯</div>
+      <div class="bc-num">01</div>
+      <div class="bc-title">Local Intent Agent</div>
+      <div class="bc-desc">Sandboxed Claude claude-sonnet-4-20250514 decomposes your natural-language goal into a typed CapabilityPlan. It can't call a provider API. It can't see a token. It only talks to one HTTP endpoint.</div>
+      <div class="bc-divider"></div>
+      <div class="bc-flow">
+        <div class="bc-flow-item"><div class="bc-flow-dot dot-amber"></div>Reads your goal</div>
+        <div class="bc-flow-item"><div class="bc-flow-dot dot-green"></div>Produces JSON CapabilityPlan[]</div>
+        <div class="bc-flow-item"><div class="bc-flow-dot dot-amber"></div>Posts to Bridge — nothing else</div>
+      </div>
+    </div>
+
+    <!-- Vault Bridge -->
+    <div class="bento-card">
+      <div class="bc-icon">🛡️</div>
+      <div class="bc-num">02</div>
+      <div class="bc-title">Governed Bridge</div>
+      <div class="bc-desc">Risk policy, vault token fetch, provider call — all in one pipeline per capability.</div>
+      <div class="bc-tag">⚡ Token Vault</div>
+    </div>
+
+    <!-- Silent Refresh -->
+    <div class="bento-card">
+      <div class="bc-icon">🔄</div>
+      <div class="bc-num">03</div>
+      <div class="bc-title">Silent Refresh</div>
+      <div class="bc-desc">Tokens near expiry? Vault rotates them silently. Your workflow never pauses.</div>
+      <div class="bc-tag">⚡ Token Vault</div>
+    </div>
+
+    <!-- Terminal card wide -->
+    <div class="bento-card wide">
+      <div class="bc-title" style="margin-bottom:0.75rem;">📡 Live Token Flow</div>
+      <div class="bc-terminal">
+        <span class="t-dim">// executor.ts — per-request vault fetch, never cached</span><br>
+        <span class="t-amber">const</span> token = <span class="t-green">await</span> getTokenForProvider(userId, <span class="t-amber">'gmail'</span>);<br>
+        <span class="t-dim">// → GET /api/v2/users/{id}/token-vault/gmail</span><br>
+        <span class="t-dim">// ← { access_token, expires_at, scope: "mail.read" }</span><br>
+        <span class="t-green">await</span> <span class="t-purple">gmail</span>.readGmailThreads(token.accessToken, <span class="t-amber">'is:unread'</span>);
+      </div>
+    </div>
+
+    <!-- Async auth card -->
+    <div class="bento-card">
+      <div class="bc-icon">⏸</div>
+      <div class="bc-num">04</div>
+      <div class="bc-title">Async Auth</div>
+      <div class="bc-desc">Provider not linked? Job suspends, auth URL generated, auto-resumes on consent.</div>
+      <div class="bc-tag">⚡ Token Vault</div>
+    </div>
+
+    <!-- Step-up -->
+    <div class="bento-card">
+      <div class="bc-icon">🔐</div>
+      <div class="bc-num">05</div>
+      <div class="bc-title">Step-Up Consent</div>
+      <div class="bc-desc">Send. Delete. Publish. Every HIGH-risk action requires explicit re-consent via Auth0 MFA.</div>
+      <div class="bc-tag">⚡ Token Vault</div>
+    </div>
+
+    <!-- Audit -->
+    <div class="bento-card">
+      <div class="bc-icon">📋</div>
+      <div class="bc-num">06</div>
+      <div class="bc-title">Full Audit Trail</div>
+      <div class="bc-desc">Every vault access, every provider call — BEFORE and AFTER events in real time.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── CONNECTIONS ────────────────────────────────────────────────────────── -->
+<section id="connections">
+  <div class="section-eyebrow">Token Vault Status</div>
+  <h2 class="section-h2" style="margin-bottom:0.5rem;">Provider Connections</h2>
+  <p class="section-sub" style="margin-bottom:1.75rem;">Jira &amp; Notion trigger the async-auth flow — connect them mid-job, no restart needed.</p>
+  <div class="conn-grid" id="conn-grid">
+    <!-- filled by JS -->
+    <div class="conn-card"><div class="conn-icon">·</div><div class="conn-name">Loading...</div></div>
+  </div>
+</section>
+
+<!-- ─── PLANNER (LIVE DEMO) ────────────────────────────────────────────────── -->
+<section id="planner">
+  <div class="section-eyebrow">Live Demo</div>
+  <h2 class="section-h2" style="margin-bottom:0.5rem;">Capability Planner</h2>
+  <p class="section-sub" style="margin-bottom:1.75rem;">Type a goal, pick integrations, set risk posture — watch Token Vault handle the rest.</p>
+
+  <div class="planner-wrap">
+
+    <!-- LEFT: Goal input -->
+    <div class="planner-panel">
+      <div class="panel-label">🎯 Define Your Goal</div>
+
+      <span class="field-label">Natural Language Goal</span>
+      <textarea id="goal-input" class="goal-textarea"
+        placeholder="e.g. Check my unread emails and create a GitHub issue for each action item, then post a summary to Slack...">
+      </textarea>
+
+      <div class="divider"></div>
+
+      <span class="field-label">Select Integrations</span>
+      <div class="provider-pills" id="provider-pills">
+        <div class="provider-pill" data-provider="gmail" id="pill-gmail">
+          <span>📧</span> Gmail <span class="p-dot"></span>
+        </div>
+        <div class="provider-pill" data-provider="calendar" id="pill-calendar">
+          <span>📅</span> Calendar <span class="p-dot"></span>
+        </div>
+        <div class="provider-pill" data-provider="github" id="pill-github">
+          <span>🐙</span> GitHub <span class="p-dot"></span>
+        </div>
+        <div class="provider-pill" data-provider="jira" id="pill-jira">
+          <span>🔷</span> Jira <span class="p-dot"></span>
+        </div>
+        <div class="provider-pill" data-provider="notion" id="pill-notion">
+          <span>📝</span> Notion <span class="p-dot"></span>
+        </div>
+        <div class="provider-pill" data-provider="slack" id="pill-slack">
+          <span>💬</span> Slack <span class="p-dot"></span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <span class="field-label">Risk Posture</span>
+      <div class="posture-row">
+        <button class="posture-btn" data-posture="LOW" id="posture-LOW">● LOW</button>
+        <button class="posture-btn active" data-posture="MEDIUM" id="posture-MEDIUM">● MEDIUM</button>
+        <button class="posture-btn" data-posture="HIGH" id="posture-HIGH">● HIGH</button>
+      </div>
+
+      <button class="exec-btn" id="execute-btn" onclick="planAndExecute()">
+        <span id="exec-icon">⚡</span> Plan &amp; Execute
+      </button>
+
+      <!-- Async auth banner -->
+      <div id="async-auth-banner">
+        <h4>🔗 Authorization Required</h4>
+        <p id="async-auth-msg">A provider isn't connected. Authorize via Auth0 Token Vault — job resumes automatically.</p>
+        <a id="async-auth-link" href="#" target="_blank">🔑 Open Authorization Flow ↗</a><br>
+        <button class="complete-auth-btn" id="complete-auth-btn" onclick="completeAsyncAuth()">
+          ✅ Simulate Auth Completion (Mock)
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output -->
+    <div class="planner-panel">
+      <div class="panel-label">📋 Capability Plan &amp; Results</div>
+
+      <div class="plan-output" id="plan-output">
+        <div class="plan-placeholder">
+          Your capability plan appears here as syntax-highlighted JSON once you run a goal.<br><br>
+          <small>Try: "Check my unread emails and create a GitHub issue for each action item"</small>
+        </div>
+      </div>
+
+      <div id="job-status">
+        <div class="job-row" style="margin-top:1rem;">
+          <span class="job-id-txt" id="job-id-txt">—</span>
+          <span class="status-chip chip-pending" id="status-chip">PENDING</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill shimmer" id="prog-fill" style="width:0%"></div>
+        </div>
+        <div class="job-msg" id="job-msg"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── AUDIT LOG ─────────────────────────────────────────────────────────── -->
+<section id="audit">
+  <div class="section-eyebrow">Security &amp; Observability</div>
+  <h2 class="section-h2" style="margin-bottom:0.5rem;">Live Audit Log</h2>
+  <p class="section-sub" style="margin-bottom:1.75rem;">Every Token Vault access, every provider call, every step-up challenge — BEFORE and AFTER, in real time.</p>
+
+  <div class="audit-box">
+    <div class="audit-topbar">
+      <div class="audit-topbar-left">
+        <div class="live-dot"></div>
+        <span class="audit-topbar-title">Live Audit Stream</span>
+      </div>
+      <button class="audit-refresh-btn" onclick="refreshAuditLog()">↻ Refresh</button>
+    </div>
+    <div class="audit-events" id="audit-events">
+      <div class="audit-empty">No audit events yet — run a capability plan to see structured events appear here.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────────────────── -->
+<footer>
+  <p>
+    🔐 <strong>Bridgekeeper</strong>
+    &nbsp;·&nbsp; Built for the <a href="https://auth0.com/ai" target="_blank">Auth0 "Authorized to Act" Hackathon</a>
+    &nbsp;·&nbsp; <a href="https://github.com/mew228/silver-adventure" target="_blank">GitHub</a>
+    &nbsp;·&nbsp; <a href="/health">Health</a>
+  </p>
+  <p style="margin-top:0.35rem;color:#1e293b">Secured by <strong style="color:#475569">Auth0 Token Vault</strong> — agents plan, humans authorize, Vault executes.</p>
+</footer>
+
+</div><!-- /page -->
+
+<!-- ─── STEP-UP MODAL ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="stepup-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <div class="modal-title">Step-Up Authentication Required</div>
+    <p class="modal-desc">
+      This action is classified as <strong>HIGH RISK</strong> by Auth0 Token Vault policy.
+      Explicit re-consent is required before the bridge can proceed.
+    </p>
+    <div class="modal-action-info" id="stepup-action-info">Action: —</div>
+    <div class="modal-btns">
+      <button class="modal-approve" onclick="approveStepUp()">✅ Approve &amp; Execute</button>
+      <button class="modal-deny" onclick="denyStepUp()">✗ Deny</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
